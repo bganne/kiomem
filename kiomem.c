@@ -13,8 +13,8 @@ MODULE_LICENSE("GPL");
 
 #define LOG(lvl, fmt, ...) \
 	printk(lvl MODULE_NAME ":%s:%i:%s(): " fmt ".\n", \
-			__FILE__, __LINE__, \
-			__func__, ## __VA_ARGS__)
+	       __FILE__, __LINE__, \
+	       __func__, ## __VA_ARGS__)
 #define LOGw(fmt, ...)	LOG(KERN_WARNING, fmt, ## __VA_ARGS__)
 #define LOGi(fmt, ...)	LOG(KERN_INFO, fmt, ## __VA_ARGS__)
 #define LOGd(fmt, ...)	LOG(KERN_DEBUG, fmt, ## __VA_ARGS__)
@@ -26,21 +26,20 @@ struct kiomem_vma {
 	int refcount;
 };
 
-static ssize_t kiomem_read(struct file *file, char __user *buf,
-			size_t count, loff_t *ppos)
+static ssize_t kiomem_read(struct file *filp, char __user *buf,
+			   size_t count, loff_t *ppos)
 {
 	struct vm_area_struct *vma;
 	struct kiomem_vma *kv;
 	uint64_t bus;
 	unsigned long remaining;
 
-	if (!file->private_data
-			|| sizeof(bus) != count
-			|| 0 != *ppos) {
+	if (!filp->private_data
+	    || sizeof(bus) != count
+	    || 0 != *ppos)
 		return -EFAULT;
-	}
 
-	vma = find_vma(current->mm, (unsigned long)file->private_data);
+	vma = find_vma(current->mm, (unsigned long)filp->private_data);
 	if (!vma || !vma->vm_private_data)
 		return -EFAULT;
 
@@ -53,22 +52,21 @@ static ssize_t kiomem_read(struct file *file, char __user *buf,
 	return sizeof(bus);
 }
 
-static ssize_t kiomem_write(struct file *file, const char __user *buf,
-			size_t count, loff_t *ppos)
+static ssize_t kiomem_write(struct file *filp, const char __user *buf,
+			    size_t count, loff_t *ppos)
 {
 	unsigned long addr;
 	unsigned long remaining;
 
 	if (sizeof(addr) != count
-			|| 0 != *ppos) {
+	    || 0 != *ppos)
 		return -EFAULT;
-	}
 
 	remaining = copy_from_user(&addr, buf, sizeof(addr));
 	if (remaining)
 		return -EFAULT;
 
-	file->private_data = (void *)addr;
+	filp->private_data = (void *)addr;
 	return sizeof(addr);
 }
 
@@ -83,7 +81,8 @@ static void kiomem_vma_close(struct vm_area_struct *vma)
 	struct kiomem_vma *kv = vma->vm_private_data;
 	kv->refcount--;
 	if (0 == kv->refcount) {
-		LOGd("freeing (%p, %i, %p)", kv->vaddr, (int)kv->size, (void *)kv->bus);
+		LOGd("freeing (%p, %i, %p)", kv->vaddr, (int)kv->size,
+		     (void *)kv->bus);
 		dma_free_coherent(NULL, kv->size, kv->vaddr, kv->bus);
 		kfree(kv);
 		vma->vm_private_data = NULL;
