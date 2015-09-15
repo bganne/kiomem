@@ -70,6 +70,21 @@ static ssize_t kiomem_write(struct file *filp, const char __user *buf,
 	return sizeof(addr);
 }
 
+static int kiomem_vma_access(struct vm_area_struct *vma, unsigned long addr,
+			     void *buf, int len, int write)
+{
+	unsigned long offset = addr - vma->vm_start;
+	struct kiomem_vma *kv = vma->vm_private_data;
+	void *vaddr = (char *)kv->vaddr + offset;
+
+	if (write)
+		memcpy(vaddr, buf, len);
+	else
+		memcpy(buf, vaddr, len);
+
+	return len;
+}
+
 static void kiomem_vma_open(struct vm_area_struct *vma)
 {
 	struct kiomem_vma *kv = vma->vm_private_data;
@@ -92,6 +107,7 @@ static void kiomem_vma_close(struct vm_area_struct *vma)
 static const struct vm_operations_struct kiomem_vma_ops = {
 	.open = kiomem_vma_open,
 	.close = kiomem_vma_close,
+	.access = kiomem_vma_access,
 };
 
 static int kiomem_mmap(struct file *filp, struct vm_area_struct *vma)
