@@ -139,9 +139,9 @@ static int kiomem_mmap(struct file *filp, struct vm_area_struct *vma)
 	vma->vm_ops = &kiomem_vma_ops;
 	vma->vm_private_data = kv;
 
-	err = vm_iomap_memory(vma, bus, size);
+	err = dma_common_mmap(NULL, vma, vaddr, bus, size);
 	if (err) {
-		LOGd("vm_iomap_memory() failed");
+		LOGd("dma_common_mmap() failed");
 		goto err2;
 	}
 
