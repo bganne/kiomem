@@ -10,7 +10,7 @@ int main(void)
 {
 	int fd = open("/dev/kiomem", O_RDWR);
 	if (fd < 0) {
-		perror("open(/dev/kiomem failed");
+		perror("open(/dev/kiomem) failed");
 		return -1;
 	}
 
@@ -26,7 +26,7 @@ int main(void)
 
 	unsigned long addr = (unsigned long)mem;
 	ssize_t sz = write(fd, &addr, sizeof(addr));
-	if (sizeof(mem) != sz) {
+	if (sizeof(addr) != sz) {
 		perror("write() failed");
 		return -1;
 	}
@@ -39,6 +39,32 @@ int main(void)
 	}
 
 	printf("%llx\n", (long long)dma);
+
+	sz = write(fd, &addr, sizeof(addr));
+	if (sizeof(addr) != sz) {
+		perror("2nd write() failed");
+		return -1;
+	}
+
+	sz = read(fd, &dma, sizeof(dma));
+	if (sizeof(dma) != sz) {
+		perror("read() failed");
+		return -1;
+	}
+
+	printf("%llx\n", (long long)dma);
+
+	sz = write(fd, &addr, 1);
+	if (-1 != sz) {
+		fprintf(stderr, "write(1) should fail!\n");
+		return -1;
+	}
+
+	sz = read(fd, &dma, 2);
+	if (-1 != sz) {
+		fprintf(stderr, "read(2) should fail!\n");
+		return -1;
+	}
 
 	return 0;
 }
